@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying dissertation."
+title: "Distributed Control for Building Automation with Smart Contracts"
+type: software
+authors:
+  - given-names: Guilherme Gregório
+    family-names: Mendes
+version: 1.0.0
+date-released: 2026-07-29
+institution: "Iscte – Instituto Universitário de Lisboa"

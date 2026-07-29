@@ -1,0 +1,16 @@
+[Unit]
+Description=IoT Algorand Bridge
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=REPLACE_WITH_LOCAL_USER
+WorkingDirectory=/opt/iot-bridge
+ExecStart=/opt/iot-bridge/venv/bin/python /opt/iot-bridge/bridge.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

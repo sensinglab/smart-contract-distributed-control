@@ -1,0 +1,9 @@
+# Direct Python dependencies used by both Bridge implementations.
+# These versions reflect a known working Building A deployment.
+fastapi==0.121.3
+pydantic==2.12.4
+py-algorand-sdk==2.11.1
+pyteal==0.27.0
+python-dotenv==1.2.1
+requests==2.32.5
+uvicorn==0.38.0

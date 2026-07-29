@@ -1,0 +1,15 @@
+[Unit]
+Description=IoT Bridge Service
+After=network.target
+
+[Service]
+Type=simple
+User=fnode1
+WorkingDirectory=/opt/iot-bridge
+ExecStart=/home/fnode1/algoenv/bin/python /opt/iot-bridge/bridge.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

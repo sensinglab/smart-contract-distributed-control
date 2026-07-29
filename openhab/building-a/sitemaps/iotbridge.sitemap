@@ -1,0 +1,16 @@
+sitemap iotbridge label="IoT Bridge (A)"
+{
+    Frame label="Admin"
+    {
+        // One-shot button that will call /devices/create via JS rule
+        Switch item=IoT_CreateDevice
+               label="Create new IoT device"
+               mappings=[ON="Create device"]
+    }
+
+    Frame label="My IoT Contracts"
+    {
+        // For each contract: state + remove button (from JS groups)
+        Group item=gA_IoTContracts
+    }
+}

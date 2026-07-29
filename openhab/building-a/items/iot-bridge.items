@@ -1,0 +1,15 @@
+// ============================================================================
+//  IoT ↔ Algorand Bridge (Building A - Owner)
+// ============================================================================
+
+// Shown in sitemap: each contract = state line + remove button
+Group gA_IoTContracts "My IoT Contracts"
+
+// Internal groups
+Group gA_IoTState   "IoT State (internal)"
+Group gA_IoTRemove  "IoT Remove (internal)"
+
+// Admin button to create a new device (you already had something like this)
+Switch IoT_CreateDevice "Create new IoT device" <power>
+
+Switch IoT_SyncTrigger "Bridge Sync Trigger"

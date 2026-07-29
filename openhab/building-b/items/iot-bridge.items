@@ -1,0 +1,11 @@
+// ============================================================================
+//  IoT ↔ Algorand Bridge (Building B - Controller)
+// ============================================================================
+
+Group gB_IoTContracts "Contracts"
+
+Group gB_IoTState "IoT State (internal)"
+Group gB_IoTOn    "IoT ON (internal)"
+Group gB_IoTOff   "IoT OFF (internal)"
+
+Switch IoT_SyncTrigger "Bridge Sync Trigger"

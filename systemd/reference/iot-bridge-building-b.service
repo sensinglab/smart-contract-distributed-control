@@ -1,0 +1,13 @@
+[Unit]
+Description=IoT Bridge (Building B)
+After=network.target
+
+[Service]
+User=fnode2
+WorkingDirectory=/opt/iot-bridge
+ExecStart=/opt/iot-bridge/venv/bin/python /opt/iot-bridge/bridge.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

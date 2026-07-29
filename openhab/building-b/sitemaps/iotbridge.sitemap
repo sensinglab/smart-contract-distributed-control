@@ -1,0 +1,7 @@
+sitemap iotbridge label="IoT Bridge (B)"
+{
+    Frame label="Contracts"
+    {
+        Group item=gB_IoTContracts
+    }
+}
