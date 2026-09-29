@@ -1,44 +1,39 @@
-# Implementation notes
+# Implementation and provenance notes
 
-## Roles
+## Preserved runtime source
 
-- **Building A** is the device owner. Its openHAB interface creates device contracts,
-  displays locally owned contracts, and requests logical removal.
-- **Building B** is the authorised remote controller. It discovers announcements from
-  Building A and submits `set:on` and `set:off` application calls.
+The documentation and configuration examples were revised on 29 September 2026. Both Python Bridge files, both JavaScript rule files, Items, sitemaps, pinned dependencies, deployment freezes, and reference systemd units remain unchanged from the supplied source snapshot.
 
-Both buildings run a local Bridge and a local Algorand node. There is no direct
-inter-building network connection; coordination is performed through confirmed
-Algorand transactions.
+The prototype uses PyTeal contracts embedded in the Bridge source. Addresses accepted by state-changing methods are embedded when the contract is compiled. The source initializes four global keys: `state`, `active`, `last_actor`, and `updated_at`. Building ownership and peer-discovery information are also maintained in the local registry and lifecycle notes; they should not be described as additional stored global keys in this implementation.
 
-## Publication cleanup applied
+## Synchronization and removal
 
-The source files in this repository were prepared from the deployed prototype exports.
-The following publication-only cleanup was applied:
+The watcher polls node status, processes newly confirmed rounds sequentially, updates local files, and triggers openHAB. The openHAB rules synchronize on that trigger and startup, not on a periodic two-second timer.
 
-1. Real `.env` files, virtual environments, local JSON caches, backups, and MQTT-era
-   files were excluded.
-2. The example environment files were aligned with the variable names read by the
-   active Bridge (`OPENHAB_BASE`, `OPENHAB_SYNC_ITEM`, and the cache paths).
-3. Obsolete MQTT variables were removed from the Building B example.
-4. The installation-specific Building B controller address in the openHAB JavaScript
-   was replaced with `REPLACE_WITH_BUILDING_B_CONTROLLER_ADDRESS`.
-5. A compact root `requirements.txt` contains direct dependencies. The complete
-   package freezes from both deployed environments are retained under
-   `docs/deployed-environments/` for provenance.
-6. The two exact systemd units used by the prototype are retained under
-   `systemd/reference/`; a portable template is provided separately.
+Logical removal removes operational registry/UI entries and sends a payment note. It does not delete the application, change the on-chain `active` value to false, or revoke the existing on-chain sender authorisations. A party still authorised by the contract can call it outside the removed UI entry. Application deletion and explicit on-chain revocation are separate extensions.
 
-No lifecycle or blockchain logic in either `bridge.py` file was rewritten.
+Both Bridge processes expose the REST methods. The evaluated UI uses A for creation/removal and B for control; those roles are not separate HTTP authentication checks.
 
-## Runtime files
+## Payment configuration and historical evidence
 
-The Bridge creates and maintains these non-authoritative local files under
-`/opt/iot-bridge/data`:
+The input environment examples used `ANNOUNCE_AMOUNT_MICROALGO=1000`. This preparation changes **only the examples** to an explicit zero amount, matching the zero-value signalling setup described in the dissertation. Both runtime files retain the original fallback of 1000 when the setting is absent.
 
-- `registry.json`: discovered and locally tracked device contracts;
-- `state.json`: most recently observed on-chain state;
-- `events.json`: locally recorded lifecycle and state-change events;
-- `last_round`: most recently processed Algorand round.
+In `payment_with_note()`, the setting is passed to the transaction's `amt` field. The network fee is separate. Setting the variable to zero does not waive that fee. The amount applies to payment-note operations, including announcements and removal notices.
 
-They are generated during execution and are intentionally excluded from version control.
+A source-code default or example is not evidence of the environment used during an experiment. Confirm the amount in original confirmed transaction records and, where available, the configuration used at the time. If historical records show a nonzero transfer, describe that separately from consumed network fees and reserved minimum balance. This package does not retrospectively change measurements or establish a zero historical amount.
+
+## Repository documentation and configuration changes
+
+- Updated the dissertation title and research scope in the README.
+- Corrected CFF metadata: author affiliation and a preferred thesis citation.
+- Retained software version 1.0.0 from the input; omitted the unverified release-date field. Record the actual release date when the version is published.
+- Added installation steps for ports, file-based scripting, TEAL compilation, configuration, and functional checks.
+- Added an explicit zero payment amount to both environment examples.
+- Added `UMask=0022` to the portable service template for predictable cache readability; reference deployment units remain unchanged.
+- Added version-control exclusions and expanded security notes.
+
+## Validation scope
+
+The repository review checked Python and JavaScript syntax, citation YAML structure, local documentation links, shell command syntax, and preservation of the original runtime files. It did not execute the full prototype, sign transactions, test openHAB, or reproduce all experimental measurements.
+
+The original prototypes contain local trust assumptions and operational limitations. Publication cleanup is not a claim that the software has been hardened for arbitrary production deployments.

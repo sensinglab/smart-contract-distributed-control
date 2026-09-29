@@ -1,0 +1,26 @@
+# Operating-system and Python files
+.DS_Store
+__MACOSX/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local credentials; retain distributed examples
+.env
+.env.*
+!*.env.example
+algod.token
+algod.admin.token
+*.key
+*.pem
+*.p12
+
+# Generated runtime data
+data/
+registry.json
+state.json
+events.json
+last_round
+*.pid
+*.log

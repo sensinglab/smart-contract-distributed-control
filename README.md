@@ -1,232 +1,101 @@
-# Distributed Control for Building Automation with Smart Contracts
+# Smart-contract-based distributed building control
 
-Implementation accompanying the MSc dissertation **“Distributed Control for Building
-Automation with Smart Contracts”** by Guilherme Gregório Mendes, Iscte – Instituto
-Universitário de Lisboa (2026).
+Prototype accompanying the MSc dissertation **“Design and Experimental Evaluation of Smart-Contract-Based Distributed Building Control on Resource-Constrained Edge Platforms”**, by Guilherme Gregório Mendes, Iscte – Instituto Universitário de Lisboa, September 2026. Supervisor: Rui Neto Marinheiro.
 
-The prototype uses device-specific Algorand smart contracts as authoritative control
-components for IoT devices. Two physically separated building environments coordinate
-through Algorand TestNet without direct inter-building network communication.
+Source repository: [sensinglab/smart-contract-distributed-control](https://github.com/sensinglab/smart-contract-distributed-control).
 
-## Architecture
+Two building environments coordinate logical device lifecycle operations through Algorand TestNet. Each runs openHAB, a Python Bridge, and a local Algorand node. The evaluated platforms were a Raspberry Pi 5 (8 GB RAM, Building A) and a Raspberry Pi 4 Model B (4 GB RAM, Building B). The devices are logical representations; physical actuators were not evaluated.
 
-Each building contains:
+## Architecture and workflow
 
-- an **openHAB** automation interface;
-- a local **Python/FastAPI Bridge**;
-- a local **Algorand node**;
-- non-authoritative local JSON cache files maintained by the Bridge.
-
-**Building A** acts as the device owner and creates/removes device contracts.
-**Building B** acts as the authorised remote controller and changes device state.
-Device announcements, state updates, and removal notifications are observed through
-confirmed blockchain transactions.
-
-## Repository structure
-
-```text
-bridge/
-  building-a/bridge.py       Owner-side Bridge
-  building-b/bridge.py       Remote-controller Bridge
-config/
-  building-a.env.example
-  building-b.env.example
-openhab/
-  building-a/                Items, sitemap, and JavaScript automation
-  building-b/                Items, sitemap, and JavaScript automation
-systemd/
-  iot-bridge.service.example Portable service template
-  reference/                 Exact units used in the prototype
-requirements.txt             Direct Python dependencies
-docs/
-  IMPLEMENTATION_NOTES.md
-  deployed-environments/     Complete package freezes from both nodes
-```
-
-## Main lifecycle operations
-
-1. **Device creation and discovery**
-   - Building A calls `POST /devices/create`.
-   - The Bridge deploys an Algorand application for the device.
-   - Building A sends a payment transaction containing a `device_announce` JSON note.
-   - Building B validates the sender and application creator, adds the device to its local
-     registry, and refreshes openHAB.
-
-2. **Remote state control**
-   - Building B calls `POST /appcall` with `set:on` or `set:off`.
-   - The smart contract checks the caller’s address and updates authoritative on-chain state.
-   - Each Bridge watcher observes the confirmed application call and refreshes local state.
-
-3. **Logical removal**
-   - Building A calls `POST /devices/remove`.
-   - The local operational entry is removed and a `device_remove` note is sent to Building B.
-   - Building B removes the device from its local registry and openHAB interface.
-   - The Algorand application remains on-chain for traceability.
-
-## Prerequisites
-
-- Linux host or Raspberry Pi;
-- Python 3.13 (the prototype was deployed with Python 3.13 environments);
-- a synchronized local Algorand TestNet node exposing algod on `127.0.0.1:8080`;
-- funded TestNet controller accounts for both buildings;
-- openHAB with JavaScript Scripting support;
-- local filesystem access from openHAB to `/opt/iot-bridge/data`.
-
-## 1. Install the Bridge
-
-Run these steps independently on both buildings:
-
-```bash
-sudo mkdir -p /opt/iot-bridge/{config,data}
-sudo chown -R "$USER":"$USER" /opt/iot-bridge
-
-python3 -m venv /opt/iot-bridge/venv
-/opt/iot-bridge/venv/bin/python -m pip install --upgrade pip
-/opt/iot-bridge/venv/bin/pip install -r requirements.txt
-```
-
-Copy the correct Bridge implementation:
-
-```bash
-# Building A
-cp bridge/building-a/bridge.py /opt/iot-bridge/bridge.py
-
-# Building B
-cp bridge/building-b/bridge.py /opt/iot-bridge/bridge.py
-```
-
-## 2. Configure each building
-
-Copy the appropriate example and fill in the local values:
-
-```bash
-# Building A
-cp config/building-a.env.example /opt/iot-bridge/config/.env
-
-# Building B
-cp config/building-b.env.example /opt/iot-bridge/config/.env
-
-chmod 600 /opt/iot-bridge/config/.env
-```
-
-Important relationships:
-
-- On Building A, `CONTROLLER_ADDRESS` is A’s public address and `PEER_CONTROLLER` is
-  B’s public address.
-- On Building B, `CONTROLLER_ADDRESS` is B’s public address and `PEER_CONTROLLER` is
-  A’s public address.
-- `CONTROLLER_MNEMONIC` is always the mnemonic for the local building account.
-- Never commit the completed `.env` file.
-
-The active Bridge reads these variables:
-
-| Variable | Purpose |
+| Component | Implementation |
 |---|---|
-| `ALGOD_ADDRESS` | Local algod API endpoint |
-| `ALGOD_TOKEN` | Local algod API token |
-| `CONTROLLER_MNEMONIC` | Local signing account mnemonic |
-| `CONTROLLER_ADDRESS` | Public address embedded in newly created contract authorisation logic |
-| `PEER_CONTROLLER` | Peer public address; on Building B, also the trusted owner address |
-| `BUILDING_ID` | Local role identifier (`A` or `B`) |
-| `OPENHAB_BASE` | Local openHAB REST endpoint |
-| `OPENHAB_SYNC_ITEM` | Item triggered when openHAB should resynchronize |
-| `BRIDGE_HTTP_PORT` | Local FastAPI port, normally `8787` |
-| `ANNOUNCE_AMOUNT_MICROALGO` | Payment amount used for coordination notes |
-| `STATE_DB` | Path of `state.json` |
-| `LAST_ROUND_FILE` | Path of the last processed round file |
+| Automation layer | openHAB interface and JavaScript rules |
+| Integration layer | Python/FastAPI Bridge |
+| Blockchain access layer | Local Algorand node in each building |
+| Shared blockchain layer | Algorand TestNet; one application per logical device |
+| Local state storage | JSON registry, state cache, events, and last processed round |
 
-## 3. Install the openHAB configuration
+Building A owns devices and initiates creation and logical removal. Building B discovers devices and submits authorised state changes. REST calls and filesystem access stay local to each building; cross-building coordination uses blockchain transactions.
 
-Copy the files for the corresponding building:
+1. **Creation:** A deploys an application and sends a `device_announce` note. B validates the note version, sender, required fields, and application creator.
+2. **Control:** B submits `set:on` or `set:off` using `POST /appcall`. The contract checks the sender and updates its global state.
+3. **Logical removal:** A removes its operational entry and sends a `device_remove` note. B removes its registry entry and interface items. The application remains on-chain. This workflow does not change the on-chain `active` value or revoke the contract's existing on-chain authorisations.
 
-```bash
-# Example for Building A
-sudo cp openhab/building-a/automation/iot-bridge-sync.js /etc/openhab/automation/js/
-sudo cp openhab/building-a/items/iot-bridge.items /etc/openhab/items/
-sudo cp openhab/building-a/sitemaps/iotbridge.sitemap /etc/openhab/sitemaps/
-```
+The PyTeal approval and clear-state programs are embedded in each `bridge.py`, in `build_device_approval_teal()` and `build_device_clear_teal()`.
 
-Use `openhab/building-b/` on Building B.
+The watcher checks for new rounds, with a two-second wait between checks, and processes every unprocessed round sequentially. **openHAB does not periodically poll the Bridge or cache files.** The Bridge commands the local `IoT_SyncTrigger` item; its rule reads the updated files. The rules also synchronize at openHAB startup.
 
-Before copying the Building B JavaScript file, replace:
+## Contents
 
-```javascript
-const MY_CONTROLLER_ADDRESS = "REPLACE_WITH_BUILDING_B_CONTROLLER_ADDRESS";
-```
-
-with Building B’s public Algorand controller address. This is a public address, not a
-mnemonic or private key.
-
-The JavaScript rules call the Bridge locally at `http://127.0.0.1:8787` and read the
-Bridge cache from `/opt/iot-bridge/data`.
-
-## 4. Install the systemd service
-
-Copy the portable template and edit the local user:
-
-```bash
-sudo cp systemd/iot-bridge.service.example /etc/systemd/system/iot-bridge.service
-sudo nano /etc/systemd/system/iot-bridge.service
-```
-
-Replace `REPLACE_WITH_LOCAL_USER`, then enable the service:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now iot-bridge
-sudo systemctl status iot-bridge
-```
-
-The exact service units used in the evaluated prototype are kept under
-`systemd/reference/`.
-
-## REST API
-
-The Bridge binds to `127.0.0.1` and exposes:
-
-| Method and path | Purpose |
+| Path | Contents |
 |---|---|
-| `POST /devices/create` | Deploy a device application and announce it |
-| `POST /devices/remove` | Perform logical removal and notify the peer |
-| `POST /appcall` | Submit `set:on`, `set:off`, or another application argument |
-| `GET /state?app_id=<id>` | Return cached state for one application |
-| `GET /events?since=<round>` | Return locally recorded events after a round |
-| `GET /health` | Return Bridge, algod, registry, and watcher status |
+| `bridge/building-a/`, `bridge/building-b/` | Owner and controller Bridges, including contract templates |
+| `openhab/building-a/`, `openhab/building-b/` | JavaScript rules, Items, and sitemaps |
+| `config/*.env.example` | Configuration templates without credentials |
+| `systemd/iot-bridge.service.example` | Portable service template |
+| `systemd/reference/` | Original deployment units |
+| `requirements.txt` | Pinned direct Python dependencies |
+| `docs/deployed-environments/` | Original package freezes from both nodes |
+| `docs/INSTALLATION.md` | Installation and functional verification |
+| `docs/IMPLEMENTATION_NOTES.md` | Behaviour, limitations, and publication changes |
+| `CITATION.cff` | Software metadata and preferred dissertation citation |
 
-Example health check:
+## Installation
 
-```bash
-curl -s http://127.0.0.1:8787/health | python3 -m json.tool
-```
+Follow [the installation guide](docs/INSTALLATION.md) on each host separately.
 
-Example state update from Building B:
+The reference environment uses Python 3.13 and openHAB 5.1.3. The root requirements file uses Building A's direct dependency versions. The full freezes document both deployed Python environments.
 
-```bash
-curl -s -X POST http://127.0.0.1:8787/appcall \
-  -H 'Content-Type: application/json' \
-  -d '{"app_id": 123456789, "method": "set:on"}'
-```
+## Payment amounts and fees
 
-## Local state and authority
+The examples explicitly configure:
 
-`registry.json`, `state.json`, `events.json`, and `last_round` are local synchronization
-artifacts. They improve local interface behaviour but are not authoritative. The device
-contract state confirmed on Algorand remains the source of authority for device state and
-access-control decisions.
+~~~ini
+ANNOUNCE_AMOUNT_MICROALGO=0
+~~~
 
-## Security
+This sets the transferred amount of announcement/removal transactions to zero. Network transaction fees still apply. This variable controls the **payment amount**, not the fee.
 
-- Keep `.env` readable only by the service user.
-- Never publish account mnemonics, algod tokens, or private keys.
-- Keep the Bridge and algod APIs bound to the loopback interface.
-- Building B validates lifecycle notes against the Building A public address configured in
-  `PEER_CONTROLLER` and checks the creator of announced applications.
-- Review `SECURITY.md` before publishing deployment files or logs.
+The Bridge retains its original fallback of **1000 microAlgos** if the variable is absent, so set it explicitly. The examples configure zero-value signalling. Configuration provenance and the distinction from historical measurements are documented in the [implementation notes](docs/IMPLEMENTATION_NOTES.md).
 
-## Notes on the deployed environments
+## Local REST API
 
-The two Raspberry Pi environments contained slightly different complete package sets.
-The root `requirements.txt` lists only the direct packages required by the Bridge, while
-full `pip freeze` outputs are retained in `docs/deployed-environments/` for transparency.
-The active implementation does not use MQTT; MQTT-era files and dependencies are not
-part of the runtime source published here.
+The supplied configuration binds the Bridge to `127.0.0.1:8787`.
+
+| Endpoint | Use in the evaluated workflow |
+|---|---|
+| `POST /devices/create` | A: deploy and announce a device |
+| `POST /devices/remove` | A: remove the operational entry and notify B |
+| `POST /appcall` | B: submit a permitted contract operation |
+| `GET /state?app_id=<id>` | Read cached application state |
+| `GET /events?since=<round>` | Read locally recorded events after a round |
+| `GET /health` | Read Bridge/node status and registry progress |
+
+Both Bridges expose these endpoints; the roles above describe the evaluated interface. Local API access is not a separate role-authentication mechanism. Contract state changes are checked on-chain.
+
+~~~bash
+curl -fsS http://127.0.0.1:8787/health | python3 -m json.tool
+~~~
+
+A successful response validates the status checks it reports, not the complete openHAB-to-blockchain workflow.
+
+## Research data and citation
+
+This repository contains the prototype implementation. Experimental datasets and evaluation scripts are being prepared for a separate Zenodo record. A link to that record will be added when it is available.
+
+Use [CITATION.cff](CITATION.cff) to cite the dissertation and identify the software version used. A software DOI belongs to the software record; a separate dataset DOI should be linked as a related output, not substituted for it.
+
+## Security and licence
+
+See [SECURITY.md](SECURITY.md) for the prototype's local trust assumptions.
+
+A reuse licence has not yet been selected for this repository.
+
+## Documentation references
+
+- [openHAB on Linux](https://www.openhab.org/docs/installation/linux.html)
+- [openHAB ports and access settings](https://www.openhab.org/docs/installation/security)
+- [JavaScript Scripting](https://www.openhab.org/addons/automation/jsscripting/)
+- [Algorand node configuration](https://dev.algorand.co/nodes/reference/config-settings/)
+- [Algorand TEAL compilation](https://dev.algorand.co/reference/rest-api/algod/operations/tealcompile/)

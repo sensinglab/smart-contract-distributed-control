@@ -11,6 +11,7 @@ ExecStart=/opt/iot-bridge/venv/bin/python /opt/iot-bridge/bridge.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+UMask=0022
 
 [Install]
 WantedBy=multi-user.target

@@ -1,10 +1,22 @@
-cff-version: 1.2.0
-message: "If you use this software, please cite the accompanying dissertation."
-title: "Distributed Control for Building Automation with Smart Contracts"
+cff-version: "1.2.0"
+message: "If you use this prototype, cite the accompanying dissertation using preferred-citation, and identify the software version used."
 type: software
+title: "Smart-contract-based distributed building control: prototype implementation"
+repository-code: "https://github.com/sensinglab/smart-contract-distributed-control"
+version: "1.0.0"
 authors:
   - given-names: Guilherme Gregório
     family-names: Mendes
-version: 1.0.0
-date-released: 2026-07-29
-institution: "Iscte – Instituto Universitário de Lisboa"
+    affiliation: "Iscte – Instituto Universitário de Lisboa"
+preferred-citation:
+  type: thesis
+  title: "Design and Experimental Evaluation of Smart-Contract-Based Distributed Building Control on Resource-Constrained Edge Platforms"
+  authors:
+    - given-names: Guilherme Gregório
+      family-names: Mendes
+      affiliation: "Iscte – Instituto Universitário de Lisboa"
+  institution:
+    name: "Iscte – Instituto Universitário de Lisboa"
+  year: 2026
+  month: 9
+  thesis-type: "Master's dissertation in Telecommunications and Computer Engineering"
